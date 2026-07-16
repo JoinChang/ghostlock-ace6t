@@ -1,8 +1,8 @@
 #ifndef TARGET_H
 #define TARGET_H
 
-#define BUILD_VARIANT_LABEL "oneplus_ace6t_2write"
-#define BUILD_FINGERPRINT "oneplus/ace6t/ace6t:16/ab14275539"
+#define BUILD_VARIANT_LABEL "ghostlock_oneplus"
+#define BUILD_FINGERPRINT "oneplus/ghostlock"
 
 /* 内核地址空间 (VA_BITS=39) */
 #define KIMAGE_TEXT_BASE 0xffffffc080000000ULL

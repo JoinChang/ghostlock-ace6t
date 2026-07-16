@@ -1,13 +1,8 @@
 /*
- * ace6t main.c — GhostLock v3 (OnePlus Ace 6T, locked BL)
- *
- * NO perf_event_open needed → works from app context (seccomp-safe).
+ * GhostLock — CVE-2026-43499 futex PI UAF exploit
  *
  * Phase 1: Write 1 — SELinux permissive (child-node PI write)
- * Phase 2: SLIDE-read — mm->owner → boot_id → get task_struct address
- *          Uses kernelsnitch mm_struct + SLIDE-like PI write to read
- *          mm_struct+MM_OWNER_OFF value into /proc/sys/kernel/random/boot_id
- * Phase 3: Write 2 — cred = init_cred (child-node PI write, using known task addr)
+ * Phase 2: Write 2 — cred = init_cred (child-node PI write via perf task leak)
  */
 
 #include "common.h"
