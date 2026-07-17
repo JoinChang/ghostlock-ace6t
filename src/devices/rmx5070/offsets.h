@@ -1,7 +1,7 @@
 /* realme RMX5070 — SM6650 / Snapdragon 6 Gen 4, kernel 6.1 (untested) */
 
 OFFSETS_ENTRY("6.1.141-android14-11-o-gee2ff77e0c22",
-  .kimage_text_base=0xffffffc008000000ULL, STRUCT_OFFSETS_6_1,
+  .kimage_text_base=0xffffffc008000000ULL, P0_LAYOUT_SM6650, STRUCT_OFFSETS_6_1,
   .off_init_task=0x0202FC00, .off_init_cred=0x02042068, .off_init_uts_ns=0x021B30F0,
   .off_empty_zero_page=0x02210000, .off_root_task_group=0x022175C0,
   .off_selinux_enforcing=0x02269E60, .off_kptr_restrict=0x0202D638,
