@@ -19,7 +19,13 @@ static const struct kernel_offsets *active_offsets = NULL;
 
 /* Override target.h macros with dynamic offsets from offsets.h table */
 #undef KIMAGE_TEXT_BASE
+#undef P0_PAGE_OFFSET
+#undef P0_PHYS_OFFSET
+#undef P0_KERNEL_PHYS_LOAD
 #define KIMAGE_TEXT_BASE              active_offsets->kimage_text_base
+#define P0_PAGE_OFFSET                active_offsets->p0_page_offset
+#define P0_PHYS_OFFSET                active_offsets->p0_phys_offset
+#define P0_KERNEL_PHYS_LOAD           active_offsets->p0_kernel_phys_load
 
 /* Struct field offsets */
 #undef TASK_CRED_OFF

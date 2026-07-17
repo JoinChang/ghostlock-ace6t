@@ -8,6 +8,9 @@ struct kernel_offsets {
 
   /* Memory layout */
   uint64_t kimage_text_base;
+  uint64_t p0_page_offset;
+  uint64_t p0_phys_offset;
+  uint64_t p0_kernel_phys_load;
 
   /* Global symbols (from kallsyms) */
   uint64_t off_init_task, off_init_cred, off_init_uts_ns, off_empty_zero_page;
@@ -40,6 +43,18 @@ struct kernel_offsets {
 };
 
 #define OFFSETS_ENTRY(uname, ...) { .uname_r = uname, __VA_ARGS__ }
+
+/* Physical memory layout for SM8845 (Snapdragon 8s Elite) */
+#define P0_LAYOUT_SM8845 \
+  .p0_page_offset=0xffffff8000000000ULL, \
+  .p0_phys_offset=0x80000000ULL, \
+  .p0_kernel_phys_load=0xa8000000ULL
+
+/* Physical memory layout for SM6650 (Snapdragon 6 Gen 4) */
+#define P0_LAYOUT_SM6650 \
+  .p0_page_offset=0xffffff8000000000ULL, \
+  .p0_phys_offset=0x80000000ULL, \
+  .p0_kernel_phys_load=0x88000000ULL
 
 /* Struct offset defaults for 6.12 GKI (most OnePlus devices) */
 #define STRUCT_OFFSETS_6_12 \
