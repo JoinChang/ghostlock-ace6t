@@ -62,8 +62,8 @@ struct kernel_offsets {
   .p0_phys_offset=0x80000000ULL, \
   .p0_kernel_phys_load=0x88000000ULL, \
   .kernelsnitch_identity_start=0xffffff8000000000ULL, \
-  .kernelsnitch_identity_end=0xffffff8800000000ULL, \
-  .direct_map_end=0xffffff8800000000ULL
+  .kernelsnitch_identity_end=0xffffff8300000000ULL, \
+  .direct_map_end=0xffffff8300000000ULL
 
 /* Struct offset defaults for 6.12 GKI (most OnePlus devices) */
 #define STRUCT_OFFSETS_6_12 \
