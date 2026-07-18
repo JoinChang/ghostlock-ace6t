@@ -50,6 +50,11 @@ struct kernel_offsets {
   #define WV_WAKE  4
   struct { int8_t word; int8_t value_flag; } pselect_words[20];
 
+  /* Stack alignment shift: compensates for different stack depths between
+   * the futex path (waiter allocation) and pselect path (fd_set data).
+   * Depends on compiler and kernel version. */
+  int pselect_waiter_word_shift;
+
   /* cred */
   uint32_t cred_uid, cred_securebits, cred_caps, cred_security;
   /* file_operations */
@@ -140,6 +145,7 @@ struct kernel_offsets {
   .fops_read_iter=0x28, .fops_write_iter=0x30, .fops_ioctl=0x50, \
   .fops_compat_ioctl=0x58, .fops_mmap=0x60, .fops_open=0x68, \
   .fops_release=0x78, .fops_splice_read=0xB8, .fops_show_fdinfo=0xD8, \
+  .pselect_waiter_word_shift=0, \
   PSELECT_WORDS_6_12
 
 /* Struct offset defaults for 6.1 GKI */
@@ -160,6 +166,7 @@ struct kernel_offsets {
   .fops_read_iter=0x20, .fops_write_iter=0x28, .fops_ioctl=0x50, \
   .fops_compat_ioctl=0x58, .fops_mmap=0x60, .fops_open=0x70, \
   .fops_release=0x80, .fops_splice_read=0xC8, .fops_show_fdinfo=0xE0, \
+  .pselect_waiter_word_shift=3, \
   PSELECT_WORDS_6_1
 
 static const struct kernel_offsets known_offsets[] = {
