@@ -197,4 +197,7 @@ extern const struct kernel_offsets *active_offsets;
 #define FAKE_WAITER_WAKE_STATE_OFF        WAITER_WAKE_STATE_OFF
 #define FAKE_WAITER_WW_CTX_OFF            WAITER_WW_CTX_OFF
 
+#undef PSELECT_WAITER_WORD_SHIFT
+#define PSELECT_WAITER_WORD_SHIFT         active_offsets->pselect_waiter_word_shift
+
 #endif

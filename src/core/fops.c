@@ -221,16 +221,19 @@ void do_pselect_fake_lock_route(void) {
     fd_set out;
     fd_set ex;
     prepare_pselect_fdsets(&in, &out, &ex);
-    pr_info("pselect route setup attempt=%d simple=%d page=%016zx "
+    pr_info("pselect route setup attempt=%d simple=%d shift=%d page=%016zx "
             "fake_lock=%016zx fake_w0=%016zx fake_task=%016zx "
-            "in0=%016llx in3=%016llx out0=%016llx ex0=%016llx "
-            "ex1=%016llx ex2=%016llx ex3=%016llx\n",
+            "in0=%016llx in3=%016llx out0=%016llx out3=%016llx out4=%016llx "
+            "ex0=%016llx ex1=%016llx ex2=%016llx ex3=%016llx\n",
             route_attempt,
             env_flag("PSELECT_SIMPLE_LAYOUT", 0),
+            PSELECT_WAITER_WORD_SHIFT,
             page_base, fake_lock, fake_w0, fake_task,
             (unsigned long long)fdset_get_word(&in, 0),
             (unsigned long long)fdset_get_word(&in, 3),
             (unsigned long long)fdset_get_word(&out, 0),
+            (unsigned long long)fdset_get_word(&out, 3),
+            (unsigned long long)fdset_get_word(&out, 4),
             (unsigned long long)fdset_get_word(&ex, 0),
             (unsigned long long)fdset_get_word(&ex, 1),
             (unsigned long long)fdset_get_word(&ex, 2),
