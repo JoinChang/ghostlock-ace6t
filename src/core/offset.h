@@ -1,5 +1,9 @@
 #ifndef TARGET_CONFIG_H
-#error "TARGET_CONFIG_H is not defined; build with -DTARGET_CONFIG_H=..."
+#define TARGET_CONFIG_H target.h
 #endif
 
-#include TARGET_CONFIG_H
+#define GL_STRINGIFY_INCLUDE_(x) #x
+#define GL_STRINGIFY_INCLUDE(x) GL_STRINGIFY_INCLUDE_(x)
+#include GL_STRINGIFY_INCLUDE(TARGET_CONFIG_H)
+#undef GL_STRINGIFY_INCLUDE
+#undef GL_STRINGIFY_INCLUDE_
