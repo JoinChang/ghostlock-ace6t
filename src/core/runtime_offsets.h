@@ -133,6 +133,9 @@ extern const struct kernel_offsets *active_offsets;
 #undef FOPS_RELEASE_OFF
 #undef FOPS_SPLICE_READ_OFF
 #undef FOPS_SHOW_FDINFO_OFF
+#undef OWNER_CHAIN_DEFAULT
+#undef REQUEUE_FAIL_OK
+#undef ROUTE_TIMEOUT_MS_DEFAULT
 #define TASK_CRED_OFF                 active_offsets->task_cred
 #define TASK_REAL_CRED_OFF            active_offsets->task_real_cred
 #define TASK_PID_OFF                  active_offsets->task_pid
@@ -176,6 +179,9 @@ extern const struct kernel_offsets *active_offsets;
 #define FOPS_RELEASE_OFF              active_offsets->fops_release
 #define FOPS_SPLICE_READ_OFF          active_offsets->fops_splice_read
 #define FOPS_SHOW_FDINFO_OFF          active_offsets->fops_show_fdinfo
+#define OWNER_CHAIN_DEFAULT           active_offsets->owner_chain_default
+#define REQUEUE_FAIL_OK               active_offsets->requeue_fail_ok
+#define ROUTE_TIMEOUT_MS_DEFAULT      active_offsets->route_timeout_ms
 
 /* FAKE_WAITER = same struct as WAITER, derive from runtime values */
 #undef FAKE_WAITER_TREE_PRIO_OFF

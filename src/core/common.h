@@ -243,6 +243,7 @@ extern atomic_int waiter_ready;
 extern atomic_int waiter_waiting;
 extern atomic_int owner_started;
 extern atomic_int owner_chain_done;
+extern atomic_int requeue_failed;
 extern atomic_int route_done;
 extern atomic_int waiter_tid;
 extern atomic_int punch_consume_go;

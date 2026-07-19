@@ -54,6 +54,9 @@ struct kernel_offsets {
    * the futex path (waiter allocation) and pselect path (fd_set data).
    * Depends on compiler and kernel version. */
   int pselect_waiter_word_shift;
+  int owner_chain_default;
+  int requeue_fail_ok;
+  int route_timeout_ms;
 
   /* cred */
   uint32_t cred_uid, cred_securebits, cred_caps, cred_security;
@@ -146,6 +149,9 @@ struct kernel_offsets {
   .fops_compat_ioctl=0x58, .fops_mmap=0x60, .fops_open=0x68, \
   .fops_release=0x78, .fops_splice_read=0xB8, .fops_show_fdinfo=0xD8, \
   .pselect_waiter_word_shift=0, \
+  .owner_chain_default=1, \
+  .requeue_fail_ok=0, \
+  .route_timeout_ms=10000, \
   PSELECT_WORDS_6_12
 
 /* Struct offset defaults for 6.1 GKI */
@@ -167,6 +173,9 @@ struct kernel_offsets {
   .fops_compat_ioctl=0x58, .fops_mmap=0x60, .fops_open=0x70, \
   .fops_release=0x80, .fops_splice_read=0xC8, .fops_show_fdinfo=0xE0, \
   .pselect_waiter_word_shift=3, \
+  .owner_chain_default=1, \
+  .requeue_fail_ok=0, \
+  .route_timeout_ms=10000, \
   PSELECT_WORDS_6_1
 
 static const struct kernel_offsets known_offsets[] = {
