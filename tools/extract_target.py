@@ -33,7 +33,7 @@ SPECIAL_RULES = {
     # Rust-mangled ashmem_fops
     "ASHMEM_FOPS_OFF": ("ASHMEM_FOPS_PTR", 0),
     # ashmem_misc = ashmem_fops - some_offset (search for pattern)
-    "ASHMEM_MISC_FOPS_OFF": ("ashmem_misc", 0),
+    "ASHMEM_MISC_FOPS_OFF": ("ashmem_misc", 0x10),
     # security_hook_heads = first security_hook_active - offset (0x68 typically)
     "SECURITY_HOOK_HEADS_OFF": ("security_hook_heads", 0),
 }
@@ -156,8 +156,26 @@ def compute_offsets(symbols, kimage_base):
                     results[define_name] = addr - kimage_base
                     break
 
-    # ASHMEM_MISC_FOPS — search for misc device registration struct
-    # It's typically near ashmem_fops. Search for "ashmem_misc" or "ashmem" misc pattern
+    # C-based ashmem (kernel 6.6 and older without Rust ashmem)
+    if "ASHMEM_IOCTL_OFF" not in results or results["ASHMEM_IOCTL_OFF"] is None:
+        c_ashmem_map = {
+            "ASHMEM_IOCTL_OFF": "ashmem_ioctl",
+            "ASHMEM_COMPAT_IOCTL_OFF": "compat_ashmem_ioctl",
+            "ASHMEM_MMAP_OFF": "ashmem_mmap",
+            "ASHMEM_OPEN_OFF": "ashmem_open",
+            "ASHMEM_RELEASE_OFF": "ashmem_release",
+            "ASHMEM_SHOW_FDINFO_OFF": "ashmem_show_fdinfo",
+        }
+        for define_name, sym_name in c_ashmem_map.items():
+            if sym_name in symbols:
+                results[define_name] = symbols[sym_name][0] - kimage_base
+
+    if "ASHMEM_FOPS_OFF" not in results or results["ASHMEM_FOPS_OFF"] is None:
+        if "ashmem_fops" in symbols:
+            results["ASHMEM_FOPS_OFF"] = symbols["ashmem_fops"][0] - kimage_base
+
+    # ASHMEM_MISC_FOPS — ashmem_misc is a struct miscdevice; fops is +0x10.
+    # It's typically near ashmem_fops. Search for "ashmem_misc" or "ashmem" misc pattern.
     addr = find_symbol(symbols, "ashmem_misc")
     if not addr:
         # Try Rust mangled misc device name
@@ -166,7 +184,7 @@ def compute_offsets(symbols, kimage_base):
                 addr = a
                 break
     if addr:
-        results["ASHMEM_MISC_FOPS_OFF"] = addr - kimage_base
+        results["ASHMEM_MISC_FOPS_OFF"] = addr - kimage_base + 0x10
 
     # security_hook_heads — derive from security_hook_active symbols
     if "SECURITY_HOOK_HEADS_OFF" not in results or results.get("SECURITY_HOOK_HEADS_OFF") is None:
