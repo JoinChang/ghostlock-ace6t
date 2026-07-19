@@ -150,6 +150,13 @@ void *owner_thread(void *arg __attribute__((unused))) {
 void *consumer_thread(void *arg __attribute__((unused))) {
   disable_rseq_for_thread();
   pin_to_core(CONSUMER_CORE);
+
+  int self_tid = (int)syscall(SYS_gettid);
+  pr_info("consumer: baseline sched_setattr on self tid=%d (no PI)\n", self_tid);
+  errno = 0;
+  long self_ret = sched_setattr_tid(self_tid, 19);
+  pr_info("consumer: baseline ret=%ld errno=%d\n", self_ret, errno);
+
   int seen = 0;
   while (!atomic_load(&punch_consume_stop)) {
     int seq = atomic_load(&punch_consume_go);
