@@ -10,7 +10,7 @@ Kernel exploit for OnePlus devices with locked bootloader. Achieves root + Kerne
 
 **CVE-2026-43499** — Futex PI (Priority Inheritance) Use-After-Free
 
-Affects Linux kernel 2.6.39 ~ 7.1. Fixed in mainline 7.1 (commit `3bfdc63936dd`). Android GKI 6.12.x remains vulnerable.
+Affects Linux kernel 2.6.39 ~ 7.1. Fixed in mainline 7.1 (commit `3bfdc63936dd`). The tested OnePlus Android 16 kernels remain vulnerable.
 
 The `pselect6` syscall copies `fd_set` data onto the kernel stack. When combined with the futex PI waiter mechanism, a freed stack frame can be reclaimed as an `rt_mutex_waiter` structure. The rb-tree rebalance during PI chain walk then writes controlled values to arbitrary kernel addresses.
 
@@ -20,6 +20,7 @@ The `pselect6` syscall copies `fd_set` data onto the kernel stack. When combined
 |--------|-----|-----|--------|--------|
 | OnePlus Ace 6T | SM8845 (Snapdragon 8s Elite) | Android 16, ColorOS 16.0.2.403 | `6.12.38-...-ab14275539` | **Verified** |
 | OnePlus Ace 6T | SM8845 (Snapdragon 8s Elite) | Android 16, ColorOS 16.0.8.301 | `6.12.38-...-ab14552068` | **Verified** |
+| OnePlus Pad 3 | SM8750 (Snapdragon 8 Elite) | Android 16, OxygenOS 16.0.7.200 | `6.6.89-...-ab14519050` | **Verified** |
 
 ### Untested (offsets extracted, not verified on device)
 
@@ -27,7 +28,7 @@ The `pselect6` syscall copies `fd_set` data onto the kernel stack. When combined
 |--------|--------|-------|
 | OnePlus 15 | `6.12.23-...-ab14541642` | Offsets extracted from OTA boot.img |
 
-Other OnePlus devices with the same SoC family and Android 16 / kernel 6.12.x should be adaptable by extracting offsets from their `boot.img`.
+Other OnePlus kernel 6.6.x or 6.12.x builds can be added with matching offsets.
 
 ## Exploit Flow
 
@@ -52,15 +53,7 @@ App (seccomp)  →  Write 1 (no perf needed)
                →  root → KSU → network fix
 ```
 
-### Auto-Boot (via ReSukiSU integration)
-
-```
-BOOT_COMPLETED → BootCompletedReceiver
-  ├─ su available → skip (soft reboot / already rooted)
-  └─ no root → GhostlockService → setsid exploit --bootstrap
-```
-
-## Key Technical Details
+## Kernel Notes
 
 ### Runtime Kernel Matching
 
@@ -71,29 +64,17 @@ static const struct kernel_offsets known_offsets[] = {
   OFFSETS_ENTRY("6.12.38-android16-5-g8c67d4274c0a-ab14275539-4k", ...),
   OFFSETS_ENTRY("6.12.38-android16-5-g844001fb8721-ab14552068-4k", ...),
   OFFSETS_ENTRY("6.12.23-android16-5-gb2a876903b49-ab14541642-4k", ...),
+  OFFSETS_ENTRY("6.6.89-android15-8-g97a9aaefab9a-ab14519050-4k", ...),
   { .uname_r = NULL }
 };
 ```
 
-### perf_find_task Fix (kernel 6.12)
+### Version Differences
 
-```c
-// Bug: bit 32 invalid on ARM64 → kernel rejects REGS_INTR
-pe.sample_regs_intr = (1ULL << 33) - 1;  // BROKEN — 24-byte samples, no regs
-
-// Fix: bits 0-31 only (x0-PC)
-pe.sample_regs_intr = (1ULL << 32) - 1;  // WORKS — 280-byte samples with regs
-```
-
-### Write 2 mode=2
-
-```c
-// mode=1: writes slab address to cred → UAF panic (~50%)
-do_one_write(target, "W2: cred", 1);  // BROKEN
-
-// mode=2: writes data_addr(INIT_CRED) → valid pointer, zero panic
-do_one_write(target, "W2: cred", 2);  // WORKS
-```
+- Kernel 6.12 uses the Rust ashmem symbol layout present in the original Ace 6T target.
+- Kernel 6.6 uses C ashmem symbols; `ashmem_misc` is a `struct miscdevice`, so the fops pointer is `ashmem_misc + 0x10`.
+- Struct offsets, pselect waiter words, owner-chain behavior, and route timeout are selected from the per-kernel profile in `src/devices/offsets.h`.
+- `perf_find_task` on ARM64 uses register mask bits 0-31 only.
 
 ### Mini ADB Client
 
@@ -109,24 +90,20 @@ Write 1 corrupts `selinux_state` bytes beyond `enforcing`, breaking `netif egres
 ## Build
 
 ```bash
-NDK=/path/to/android-ndk
-$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang \
-  -O2 -Wall -Isrc/core -Isrc/devices -DTARGET_CONFIG_H="target.h" \
-  src/core/main.c src/core/util.c src/core/slide.c \
-  src/core/fops.c src/core/pipe.c src/core/root.c \
-  src/core/miniadb.c \
-  -o ghostlock -fPIE -pie -pthread
+ANDROID_NDK_HOME=/path/to/android-ndk make
 ```
+
+On Windows, the Makefile auto-selects the NDK `windows-x86_64` toolchain. Override with `HOST_TAG=...` if needed.
 
 ## Prerequisites
 
 ### ksud (required for KSU installation)
 
-GhostLock only provides root. KernelSU installation depends on **ksud** — a binary that contains embedded `kernelsu.ko` modules for each KMI version. The root script finds ksud on device and calls `ksud late-load --kmi android16-6.12`.
+GhostLock only provides root. KernelSU installation depends on **ksud** — a binary that contains embedded `kernelsu.ko` modules for each KMI version. The root script finds ksud on device and calls `ksud late-load --kmi` using the running kernel's KMI, for example `android16-6.12` or `android15-6.6`.
 
 | Method | Steps |
 |--------|-------|
-| **ReSukiSU APK** (recommended) | Install [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) or this [fork](https://github.com/JoinChang/ReSukiSU). Official release bundles `libksud.so`. |
+| **ReSukiSU APK** | Install [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU). Official release bundles `libksud.so`. |
 | **CI release** | Download `ksud-aarch64-linux-android.zip` from [ReSukiSU CI](https://github.com/cctv18/ReSukiSU_CI/releases) |
 
 > Without ksud, the exploit achieves root (uid=0) but KSU won't be installed and `su` won't persist.
@@ -139,8 +116,6 @@ adb push ~/.android/adbkey /data/local/tmp/a/adbkey
 adb push ghostlock /data/local/tmp/a/e && chmod 755 /data/local/tmp/a/e
 ```
 
-After first successful jailbreak, `persist.adb.tcp.port=5555` is set via `resetprop` — subsequent boots are fully automatic.
-
 ## Usage
 
 ```bash
@@ -151,15 +126,15 @@ After first successful jailbreak, `persist.adb.tcp.port=5555` is set via `resetp
 
 ## Adding New Devices / Kernel Versions
 
-Only `boot.img` is needed — no root, no device access required.
+Use device `kallsyms` for global symbols and BTF for struct fields.
 
-### Extract offsets from boot.img
+### Extract offsets
 
 ```bash
 # 1. Extract kernel
 python -c "import struct; d=open('boot.img','rb').read(); open('kernel','wb').write(d[4096:4096+struct.unpack_from('<I',d,8)[0]])"
 
-# 2. Global symbols (kallsyms)
+# 2. Global symbols
 python tools/extract_target.py    # 28 offsets, auto-validated
 
 # 3. Struct fields (BTF)
@@ -167,23 +142,6 @@ python tools/extract_btf.py kernel  # 57 offsets, auto-validated
 
 # 4. Add to offsets.h, rebuild
 ```
-
-### Coverage: 103/103 offsets from boot.img
-
-| Source | Count | Method |
-|--------|-------|--------|
-| kallsyms (global symbols) | 28 | `extract_target.py` |
-| BTF (struct fields) | 57 | `extract_btf.py` |
-| Derived (same struct, different usage) | 9 | Automatic |
-| Constants (fixed values) | 12 | No extraction needed |
-
-### Adapting to non-OnePlus devices
-
-The core exploit is device-agnostic. Adaptation may require:
-- Different `VA_BITS` (48 vs 39) → update `target.h` memory layout
-- Different timing parameters → tune `common.h`
-- Different ashmem implementation (C vs Rust) → update symbol matching
-- No OnePlus `secureguard` → simplifies things (one less issue)
 
 ## Files
 
@@ -197,9 +155,9 @@ The core exploit is device-agnostic. Adaptation may require:
 | `src/core/target.h` | Memory layout, struct field constants |
 | `src/devices/offsets.h` | Aggregates all device offset tables |
 | `src/devices/<device>/offsets.h` | Per-device kernel offset entries |
-| `src/slide.c` | SLIDE kernel address leak |
-| `src/pipe.c` | Pipe buffer manipulation |
-| `src/root.c` | Root shell setup |
+| `src/core/slide.c` | SLIDE kernel address leak |
+| `src/core/pipe.c` | Pipe buffer manipulation |
+| `src/core/root.c` | Root shell setup |
 | `tools/extract_target.py` | Offset extraction from kallsyms |
 | `tools/extract_btf.py` | Struct offset extraction from BTF |
 
