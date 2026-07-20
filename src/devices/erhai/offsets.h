@@ -1,6 +1,6 @@
-/* OnePlus Pad 3 (OPD2415) — SM8750 / Snapdragon 8 Elite */
+/* OnePlus Pad 2 Pro (OPD2413) & OnePlus Pad 3 (OPD2415) — SM8750 / Snapdragon 8 Elite */
 
-OFFSETS_ENTRY("6.6.89-android15-8-g5a0ffb447c1d-ab13771415-4k",  /* OPD2415_16.0.0.211 */
+OFFSETS_ENTRY("6.6.89-android15-8-g5a0ffb447c1d-ab13771415-4k",  /* OPD2413_16.0.1.301 & OPD2415_16.0.0.211 */
   .kimage_text_base=0xffffffc080000000ULL, P0_LAYOUT_ONEPLUS_P0_A800, STRUCT_OFFSETS_6_6,
   .off_init_task=0x020DE280, .off_init_cred=0x020F0548, .off_init_uts_ns=0x02261F90,
   .off_empty_zero_page=0x022CD000, .off_root_task_group=0x022D5580,
@@ -18,7 +18,7 @@ OFFSETS_ENTRY("6.6.89-android15-8-g5a0ffb447c1d-ab13771415-4k",  /* OPD2415_16.0
   .off_slide_boot_id=0x02337E98,
 ),
 
-OFFSETS_ENTRY("6.6.89-android15-8-g096cdb6ecefc-ab14358676-4k",  /* OPD2415_16.0.3.500 */
+OFFSETS_ENTRY("6.6.89-android15-8-g096cdb6ecefc-ab14358676-4k",  /* OPD2413_16.0.3.501 & OPD2415_16.0.3.500 */
   .kimage_text_base=0xffffffc080000000ULL, P0_LAYOUT_ONEPLUS_P0_A800, STRUCT_OFFSETS_6_6,
   .off_init_task=0x020EE280, .off_init_cred=0x02100548, .off_init_uts_ns=0x02272050,
   .off_empty_zero_page=0x022DD000, .off_root_task_group=0x022E5580,
@@ -36,7 +36,7 @@ OFFSETS_ENTRY("6.6.89-android15-8-g096cdb6ecefc-ab14358676-4k",  /* OPD2415_16.0
   .off_slide_boot_id=0x02347E98,
 ),
 
-OFFSETS_ENTRY("6.6.89-android15-8-g97a9aaefab9a-ab14519050-4k",  /* OPD2415_16.0.7.200 */
+OFFSETS_ENTRY("6.6.89-android15-8-g97a9aaefab9a-ab14519050-4k",  /* OPD2413_16.0.7.200 & OPD2415_16.0.7.200 */
   .kimage_text_base=0xffffffc080000000ULL, P0_LAYOUT_ONEPLUS_P0_A800, STRUCT_OFFSETS_6_6,
   .off_init_task=0x020FE280, .off_init_cred=0x02110548, .off_init_uts_ns=0x02282190,
   .off_empty_zero_page=0x022ED000, .off_root_task_group=0x022F5580,
@@ -52,4 +52,22 @@ OFFSETS_ENTRY("6.6.89-android15-8-g97a9aaefab9a-ab14519050-4k",  /* OPD2415_16.0
   .off_cap_capable_active=0,
   .off_slide_nfulnl_logger=0x020F2258, .off_slide_loggers_0_1=0x020F21B0,
   .off_slide_boot_id=0x02357E98,
+),
+
+OFFSETS_ENTRY("6.6.118-android15-8-g2e6b9c3812c5-ab15114928-4k",  /* OPD2413_16.0.9.400 (untested) */
+  .kimage_text_base=0xffffffc080000000ULL, P0_LAYOUT_ONEPLUS_P0_A800, STRUCT_OFFSETS_6_6,
+  .off_init_task=0x0211E280, .off_init_cred=0x02130748, .off_init_uts_ns=0x022A3448,
+  .off_empty_zero_page=0x0230F000, .off_root_task_group=0x02317580,
+  .off_selinux_enforcing=0x02358EE0, .off_kptr_restrict=0x0211BCF8,
+  .off_selinux_blob_sizes=0x0167B5D0, .off_security_hook_heads=0x0167AE98,
+  .off_kmalloc_caches=0x0167A9D8, .off_anon_pipe_buf_ops=0x0116EB08,
+  .off_ashmem_misc_fops=0x0227C528, .off_ashmem_fops=0x012EF880,
+  .off_ashmem_ioctl=0x00C8BFB0, .off_ashmem_compat_ioctl=0x00C8C66C,
+  .off_ashmem_mmap=0x00C8C6C0, .off_ashmem_open=0x00C8C8E0,
+  .off_ashmem_release=0x00C8C968, .off_ashmem_show_fdinfo=0x00C8C9F4,
+  .off_configfs_read_iter=0x00490B14, .off_configfs_bin_write_iter=0x00490D1C,
+  .off_copy_splice_read=0x004144E4, .off_noop_llseek=0x003C7244,
+  .off_cap_capable_active=0,
+  .off_slide_nfulnl_logger=0x02112260, .off_slide_loggers_0_1=0x021121B8,
+  .off_slide_boot_id=0x02379ED8,
 ),
