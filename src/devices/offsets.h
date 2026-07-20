@@ -167,7 +167,7 @@ struct kernel_offsets {
   .fops_read_iter=0x20, .fops_write_iter=0x28, .fops_ioctl=0x50, \
   .fops_compat_ioctl=0x58, .fops_mmap=0x60, .fops_open=0x70, \
   .fops_release=0x80, .fops_splice_read=0xC8, .fops_show_fdinfo=0xE0, \
-  .pselect_waiter_word_shift=3, \
+  .pselect_waiter_word_shift=-1, \
   PSELECT_WORDS_6_1
 
 static const struct kernel_offsets known_offsets[] = {
