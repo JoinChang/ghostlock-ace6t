@@ -113,7 +113,8 @@ GhostLock only provides root. KernelSU installation depends on **ksud** — a bi
 ```bash
 adb tcpip 5555
 adb push ~/.android/adbkey /data/local/tmp/a/adbkey
-adb push ghostlock /data/local/tmp/a/e && chmod 755 /data/local/tmp/a/e
+adb push ghostlock /data/local/tmp/a/e
+adb shell chmod 755 /data/local/tmp/a/e
 ```
 
 ## Usage
