@@ -84,6 +84,17 @@ struct kernel_offsets {
   .kernelsnitch_identity_end=0xffffff8300000000ULL, \
   .direct_map_end=0xffffff8300000000ULL
 
+/* Physical memory layout for MT6878 (Dimensity 7300, 8/12GB)
+ * VA_BITS=39, PAGE_OFFSET=0xffffffc000000000, PHYS_OFFSET=0x40000000 (MTK DRAM base)
+ * TODO: verify identity range and direct_map_end on actual device */
+#define P0_LAYOUT_MT6878 \
+  .p0_page_offset=0xffffffc000000000ULL, \
+  .p0_phys_offset=0x40000000ULL, \
+  .p0_kernel_phys_load=0x48000000ULL, \
+  .kernelsnitch_identity_start=0xffffffc000000000ULL, \
+  .kernelsnitch_identity_end=0xffffffc300000000ULL, \
+  .direct_map_end=0xffffffc300000000ULL
+
 /*
  * Pselect fake waiter word tables.
  * word index = position in fd_set (relative to waiter base word).
@@ -174,6 +185,7 @@ static const struct kernel_offsets known_offsets[] = {
 #include "ace6t/offsets.h"
 #include "op15/offsets.h"
 #include "rmx5070/offsets.h"
+#include "opd2502/offsets.h"
   { .uname_r = NULL }
 };
 
