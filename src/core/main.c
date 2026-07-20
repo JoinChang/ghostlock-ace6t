@@ -395,8 +395,15 @@ static void child_main(struct child_pipes *p) {
     execl("/system/bin/sh", "sh", "/data/local/tmp/.ghostlock_root.sh", NULL);
     _exit(1);
   }
-  if (gc > 0) waitpid(gc, NULL, 0);
-  for (;;) pause();
+  if (gc < 0) _exit(1);
+  int status = 0;
+  while (waitpid(gc, &status, 0) < 0) {
+    if (errno == EINTR) continue;
+    _exit(1);
+  }
+  if (WIFEXITED(status)) _exit(WEXITSTATUS(status));
+  if (WIFSIGNALED(status)) _exit(128 + WTERMSIG(status));
+  _exit(1);
 }
 
 static pid_t spawn_child(struct child_pipes *p) {
