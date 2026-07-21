@@ -20,7 +20,7 @@ The `pselect6` syscall copies `fd_set` data onto the kernel stack. When combined
 |--------|-----|-----|--------|--------|
 | OnePlus Ace 6T | SM8845 (Snapdragon 8s Elite) | Android 16, ColorOS 16.0.2.403 | `6.12.38-...-ab14275539` | **Verified** |
 | OnePlus Ace 6T | SM8845 (Snapdragon 8s Elite) | Android 16, ColorOS 16.0.8.301 | `6.12.38-...-ab14552068` | **Verified** |
-| OnePlus Pad 3 | SM8750 (Snapdragon 8 Elite) | Android 16, OxygenOS 16.0.7.200 | `6.6.89-...-ab14519050` | **Verified** |
+| OnePlus Pad 3 | SM8750 (Snapdragon 8 Elite) | Android 16, OxygenOS 16.0.9.400 | `6.6.118-...-ab15114928` | **Verified** |
 
 ### Untested (offsets extracted, not verified on device)
 

@@ -54,7 +54,7 @@ OFFSETS_ENTRY("6.6.89-android15-8-g97a9aaefab9a-ab14519050-4k",  /* OPD2413_16.0
   .off_slide_boot_id=0x02357E98,
 ),
 
-OFFSETS_ENTRY("6.6.118-android15-8-g2e6b9c3812c5-ab15114928-4k",  /* OPD2413_16.0.9.400 (untested) */
+OFFSETS_ENTRY("6.6.118-android15-8-g2e6b9c3812c5-ab15114928-4k",  /* OPD2413_16.0.9.400 & OPD2415_16.0.9.400 */
   .kimage_text_base=0xffffffc080000000ULL, P0_LAYOUT_ONEPLUS_P0_A800, STRUCT_OFFSETS_6_6,
   .off_init_task=0x0211E280, .off_init_cred=0x02130748, .off_init_uts_ns=0x022A3448,
   .off_empty_zero_page=0x0230F000, .off_root_task_group=0x02317580,
