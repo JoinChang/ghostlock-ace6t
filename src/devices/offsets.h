@@ -22,6 +22,7 @@ static const struct kernel_offsets known_offsets[] = {
   /* Add new devices by creating src/devices/<name>/offsets.h */
 #include "ace6t/offsets.h"
 #include "op15/offsets.h"
+#include "findx9ultra/offsets.h"
   { .uname_r = NULL }
 };
 

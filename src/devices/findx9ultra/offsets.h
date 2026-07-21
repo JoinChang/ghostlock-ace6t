@@ -1,0 +1,18 @@
+/* OPPO Find X9 Ultra — SM8750 / Snapdragon 8 Elite, kernel 6.12 */
+
+OFFSETS_ENTRY("6.12.58-android16-6-g7704a1ae279b-ab15213644-4k",
+  .off_init_task=0x0252DAC0, .off_init_cred=0x02543830, .off_init_uts_ns=0x026B8C48,
+  .off_empty_zero_page=0x0275E000, .off_root_task_group=0x027668C0,
+  .off_selinux_enforcing=0x027B5948, .off_kptr_restrict=0x0252C218,
+  .off_selinux_blob_sizes=0x01934868, .off_security_hook_heads=0,
+  .off_kmalloc_caches=0x0192A4C0, .off_anon_pipe_buf_ops=0x012EB608,
+  .off_ashmem_misc_fops=0, .off_ashmem_fops=0x027E3F38,
+  .off_ashmem_ioctl=0x00EFC658, .off_ashmem_compat_ioctl=0x00EFC6A4,
+  .off_ashmem_mmap=0x00EFC720, .off_ashmem_open=0x00EFC744,
+  .off_ashmem_release=0x00EFC81C, .off_ashmem_show_fdinfo=0x00EFC9E4,
+  .off_configfs_read_iter=0x00739350, .off_configfs_bin_write_iter=0x007398FC,
+  .off_copy_splice_read=0x006E7330, .off_noop_llseek=0x006BA390,
+  .off_cap_capable_active=0,
+  .off_slide_nfulnl_logger=0x025221B0, .off_slide_loggers_0_1=0x025220F8,
+  .off_slide_boot_id=0x027D7D08,
+),
